@@ -1,19 +1,17 @@
 package cs.sonu.GitAgent.cli;
 
 import cs.sonu.GitAgent.commit.*;
+import cs.sonu.GitAgent.dto.CommitRequest;
+import cs.sonu.GitAgent.dto.CommitResponse;
 import cs.sonu.GitAgent.git.GitCommitService;
 import cs.sonu.GitAgent.git.GitContextCollector;
 import cs.sonu.GitAgent.git.GitHookManager;
 import cs.sonu.GitAgent.interaction.ApprovalService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.system.ApplicationHome;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
@@ -41,19 +39,20 @@ public class GitAgentCommand implements Callable<Integer> {
             CommitValidator validator,
             GitCommitService commitService,
             GitHookManager hookManager,
-            ApprovalService approvalService) {
+            ApprovalService approvalService,
+            RestTemplate restTemplate) {
         this.contextCollector = contextCollector;
         this.formatter = formatter;
         this.validator = validator;
         this.commitService = commitService;
         this.hookManager = hookManager;
         this.approvalService = approvalService;
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = restTemplate;
     }
 
     @Override
     public Integer call() {
-        System.out.println("AI Git Agent CLI active.");
+        System.out.println("AI Git Agent CLI active. Run 'cwsgit --help' for options.");
         return 0;
     }
 
@@ -77,8 +76,7 @@ public class GitAgentCommand implements Callable<Integer> {
     }
 
     @Command(name = "pre-push", description = "Analyze current commit and suggest improvements before push")
-    public int runPrePushHook(
-            @Parameters(arity = "0..*", description = "Git remote parameters passed automatically by Git") List<String> gitArgs) {
+    public int runPrePushHook(@Parameters(arity = "0..*") List<String> gitArgs) {
         System.out.println("\nAI Git Agent");
         System.out.println("────────────\n");
 
@@ -96,41 +94,27 @@ public class GitAgentCommand implements Callable<Integer> {
 
         GeneratedCommit generatedCommit;
         try {
-            // Build prompt payload
-            String formattedPrompt = String.format("""
-                    Generate a conventional commit based on this Git context:
-
-                    Original Message: %s
-                    Commit SHA: %s
-                    Changed Files: %s
-                    Recent Commits: %s
-
-                    Diff:
-                    %s
-                    """,
+            CommitRequest requestPayload = new CommitRequest(
                     context.originalMessage() != null ? context.originalMessage().trim() : "",
                     context.commitSha() != null ? context.commitSha() : "",
                     context.changedFiles() != null && !context.changedFiles().isEmpty()
                             ? context.changedFiles().toString()
-                            : "None (Root/Initial Commit)",
+                            : "None",
                     context.recentCommits() != null && !context.recentCommits().isEmpty()
                             ? String.join(" | ", context.recentCommits())
-                            : "None (No previous history)",
+                            : "None",
                     context.diff() != null && !context.diff().isBlank() ? context.diff() : "No diff available");
 
-            // Post request to proxy server
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.TEXT_PLAIN);
-            HttpEntity<String> request = new HttpEntity<>(formattedPrompt, headers);
+            ResponseEntity<CommitResponse> response = restTemplate.postForEntity(backendUrl, requestPayload,
+                    CommitResponse.class);
 
-            ResponseEntity<String> response = restTemplate.postForEntity(backendUrl, request, String.class);
-
-            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                throw new RuntimeException("Proxy returned status " + response.getStatusCode());
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null
+                    || !response.getBody().success()) {
+                String errorMsg = response.getBody() != null ? response.getBody().error() : "Unknown proxy error";
+                throw new RuntimeException(errorMsg);
             }
 
-            // Create GeneratedCommit from proxy response text
-            generatedCommit = GeneratedCommit.fromRawMessage(response.getBody());
+            generatedCommit = GeneratedCommit.fromRawMessage(response.getBody().commitMessage());
 
         } catch (Exception e) {
             System.err.println(

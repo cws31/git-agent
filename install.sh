@@ -7,33 +7,35 @@ echo "================================================================"
 
 mvn clean package -DskipTests
 
+JAR_FILE=$(ls target/*.jar | head -n 1)
+
+if [ -z "$JAR_FILE" ]; then
+    echo "[ERROR] Could not find compiled JAR file in target/!"
+    exit 1
+fi
+
 INSTALL_DIR="/usr/local/bin"
 JAR_DIR="/usr/local/share/cwsgit"
 
+SUDO=""
 if [ ! -w "$INSTALL_DIR" ] || [ ! -w "$JAR_DIR" ]; then
-    echo "Administrative privileges required to install to /usr/local/bin."
     SUDO="sudo"
-else
-    SUDO=""
 fi
 
 $SUDO mkdir -p "$JAR_DIR"
 $SUDO mkdir -p "$INSTALL_DIR"
 
-$SUDO cp target/GitAgent-0.0.1-SNAPSHOT.jar "$JAR_DIR/cwsgit.jar"
+$SUDO cp "$JAR_FILE" "$JAR_DIR/cwsgit.jar"
 
 # Create global wrapper script
 cat << 'EOF' | $SUDO tee "$INSTALL_DIR/cwsgit" > /dev/null
 #!/bin/bash
-java -jar /usr/local/share/cwsgit/cwsgit.jar "$@"
+exec java -jar /usr/local/share/cwsgit/cwsgit.jar "$@"
 EOF
 
 $SUDO chmod +x "$INSTALL_DIR/cwsgit"
 
-echo ""
 echo "================================================================"
-echo "  ✓ Success! 'cwsgit' installed globally at $INSTALL_DIR/cwsgit"
-echo ""
-echo "  Open ANY Git repository on your machine and run:"
-echo "      cwsgit install"
+echo " ✓ Success! 'cwsgit' installed globally."
+echo " Run 'cwsgit install' inside any Git repo to hook it up."
 echo "================================================================"
