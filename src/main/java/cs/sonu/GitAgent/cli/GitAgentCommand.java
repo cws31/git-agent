@@ -1,13 +1,18 @@
 package cs.sonu.GitAgent.cli;
 
-import cs.sonu.GitAgent.agent.CommitMessageAgent;
 import cs.sonu.GitAgent.commit.*;
 import cs.sonu.GitAgent.git.GitCommitService;
 import cs.sonu.GitAgent.git.GitContextCollector;
 import cs.sonu.GitAgent.git.GitHookManager;
 import cs.sonu.GitAgent.interaction.ApprovalService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.system.ApplicationHome;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -21,27 +26,29 @@ import java.util.concurrent.Callable;
 public class GitAgentCommand implements Callable<Integer> {
 
     private final GitContextCollector contextCollector;
-    private final CommitMessageAgent aiAgent;
     private final CommitFormatter formatter;
     private final CommitValidator validator;
     private final GitCommitService commitService;
     private final GitHookManager hookManager;
     private final ApprovalService approvalService;
+    private final RestTemplate restTemplate;
+
+    @Value("${cwsgit.backend.url:http://localhost:8080/api/v1/generate-commit}")
+    private String backendUrl;
 
     public GitAgentCommand(GitContextCollector contextCollector,
-            CommitMessageAgent aiAgent,
             CommitFormatter formatter,
             CommitValidator validator,
             GitCommitService commitService,
             GitHookManager hookManager,
             ApprovalService approvalService) {
         this.contextCollector = contextCollector;
-        this.aiAgent = aiAgent;
         this.formatter = formatter;
         this.validator = validator;
         this.commitService = commitService;
         this.hookManager = hookManager;
         this.approvalService = approvalService;
+        this.restTemplate = new RestTemplate();
     }
 
     @Override
@@ -85,11 +92,11 @@ public class GitAgentCommand implements Callable<Integer> {
         }
 
         System.out.println("✓ Context collected (" + context.changedFiles().size() + " files modified)");
-        System.out.println("Generating production-grade commit message...\n");
+        System.out.println("Generating production-grade commit message via AI proxy...\n");
 
         GeneratedCommit generatedCommit;
         try {
-            // Build a safe string representation of the context
+            // Build prompt payload
             String formattedPrompt = String.format("""
                     Generate a conventional commit based on this Git context:
 
@@ -111,7 +118,20 @@ public class GitAgentCommand implements Callable<Integer> {
                             : "None (No previous history)",
                     context.diff() != null && !context.diff().isBlank() ? context.diff() : "No diff available");
 
-            generatedCommit = aiAgent.generate(formattedPrompt);
+            // Post request to proxy server
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.TEXT_PLAIN);
+            HttpEntity<String> request = new HttpEntity<>(formattedPrompt, headers);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(backendUrl, request, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new RuntimeException("Proxy returned status " + response.getStatusCode());
+            }
+
+            // Create GeneratedCommit from proxy response text
+            generatedCommit = GeneratedCommit.fromRawMessage(response.getBody());
+
         } catch (Exception e) {
             System.err.println(
                     "\nUnable to generate a commit message. AI provider unavailable or timed out: " + e.getMessage());

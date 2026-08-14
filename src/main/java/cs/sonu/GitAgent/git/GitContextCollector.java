@@ -3,6 +3,7 @@ package cs.sonu.GitAgent.git;
 import cs.sonu.GitAgent.commit.ChangeType;
 import cs.sonu.GitAgent.commit.ChangedFile;
 import cs.sonu.GitAgent.commit.CommitContext;
+import cs.sonu.GitAgent.security.SecretSanitizer;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -14,29 +15,36 @@ import java.util.stream.Collectors;
 public class GitContextCollector {
 
     private final GitService gitService;
+    private final SecretSanitizer secretSanitizer;
+    private final DiffFilter diffFilter;
     private static final int MAX_DIFF_LENGTH = 8000;
 
-    public GitContextCollector(GitService gitService) {
+    public GitContextCollector(GitService gitService, SecretSanitizer secretSanitizer, DiffFilter diffFilter) {
         this.gitService = gitService;
+        this.secretSanitizer = secretSanitizer;
+        this.diffFilter = diffFilter;
     }
 
     public CommitContext collectContext() {
         String sha = gitService.executeCommand("git", "rev-parse", "HEAD");
         String message = gitService.executeCommand("git", "log", "-1", "--pretty=%B");
-        String diff = collectDiff();
+        String rawDiff = collectDiff();
+
+        // Clean & redact secrets from diff
+        String cleanDiff = diffFilter.cleanDiff(rawDiff);
+        String sanitizedDiff = secretSanitizer.sanitize(cleanDiff);
+
         List<ChangedFile> files = collectChangedFiles();
         List<String> history = collectRecentCommits();
 
-        return new CommitContext(sha, message, files, diff, history);
+        return new CommitContext(sha, message, files, sanitizedDiff, history);
     }
 
     private String collectDiff() {
         String diff;
         try {
-            // Try comparing HEAD to previous commit (works for 2nd commit onwards)
             diff = gitService.executeCommand("git", "diff", "HEAD~1", "HEAD");
         } catch (Exception e) {
-            // Root commit fallback: show the diff of the initial commit itself
             try {
                 diff = gitService.executeCommand("git", "show", "--pretty=", "HEAD");
             } catch (Exception ex) {
@@ -69,13 +77,11 @@ public class GitContextCollector {
 
     private List<String> collectRecentCommits() {
         try {
-            // Get last 10 commits, skip the current HEAD
             String output = gitService.executeCommand("git", "log", "-10", "--skip=1", "--pretty=%s");
             if (output.isBlank())
                 return Collections.emptyList();
             return Arrays.asList(output.split("\n"));
         } catch (Exception e) {
-            // Root commit has no previous history
             return Collections.emptyList();
         }
     }

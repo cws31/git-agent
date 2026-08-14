@@ -1,34 +1,23 @@
 package cs.sonu.GitAgent;
 
-import cs.sonu.GitAgent.cli.GitAgentCommand;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.ExitCodeGenerator;
-import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import picocli.CommandLine;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 
 @SpringBootApplication
-public class GitAgentApplication implements CommandLineRunner, ExitCodeGenerator {
-
-	private final GitAgentCommand gitAgentCommand;
-	private int exitCode;
-
-	public GitAgentApplication(GitAgentCommand gitAgentCommand) {
-		this.gitAgentCommand = gitAgentCommand;
-	}
+public class GitAgentApplication {
 
 	public static void main(String[] args) {
-		System.exit(SpringApplication.exit(SpringApplication.run(GitAgentApplication.class, args)));
-	}
-
-	@Override
-	public void run(String... args) {
-		// Run PicoCLI command
-		this.exitCode = new CommandLine(gitAgentCommand).execute(args);
-	}
-
-	@Override
-	public int getExitCode() {
-		return this.exitCode;
+		if (args.length > 0) {
+			// CLI Mode: Disable web server (Tomcat)
+			new SpringApplicationBuilder(GitAgentApplication.class)
+					.web(WebApplicationType.NONE)
+					.run(args);
+		} else {
+			// Server Mode: Run full web server (Tomcat on port 8080)
+			new SpringApplicationBuilder(GitAgentApplication.class)
+					.web(WebApplicationType.SERVLET)
+					.run(args);
+		}
 	}
 }

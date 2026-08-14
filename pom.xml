@@ -29,6 +29,17 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
+        <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+        <dependency>
+    <groupId>dev.langchain4j</groupId>
+    <artifactId>langchain4j-open-ai</artifactId>
+    <version>0.33.0</version>
+</dependency>
+
         <!-- PicoCLI for Spring Boot CLI Subcommands -->
         <dependency>
             <groupId>info.picocli</groupId>

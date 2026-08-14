@@ -23,25 +23,28 @@ public class GitHookManager {
         String repoRoot = gitService.executeCommand("git", "rev-parse", "--show-toplevel");
         Path hookPath = Paths.get(repoRoot, ".git", "hooks", "pre-push");
 
-        // Convert backslashes for Windows path safety inside shell script
         String formattedJarPath = jarAbsolutePath.replace("\\", "/");
 
+        // Universal POSIX shell hook compatible with Windows Git Bash, macOS, and Linux
         String hookScript = """
                 #!/bin/sh
                 # AI Git Commit Agent Pre-Push Hook
 
-                # Check if --no-verify flag was passed or bypass requested
                 if [ "$1" = "--no-verify" ]; then
                     exit 0
                 fi
 
-                # Re-attach interactive terminal input stream for prompts
+                # Attach interactive terminal stream for prompt input
                 exec < /dev/tty
 
-                # Execute AI Agent JAR
-                java -jar "%s" pre-push "$@"
+                if command -v cwsgit >/dev/null 2>&1; then
+                    cwsgit pre-push "$@"
+                elif command -v aigit >/dev/null 2>&1; then
+                    aigit pre-push "$@"
+                else
+                    java -jar "%s" --spring.main.web-application-type=none pre-push "$@"
+                fi
 
-                # Capture the exit status from the AI Agent
                 EXIT_CODE=$?
 
                 if [ $EXIT_CODE -ne 0 ]; then
@@ -55,7 +58,7 @@ public class GitHookManager {
         Files.writeString(hookPath, hookScript);
         File hookFile = hookPath.toFile();
 
-        // Make the pre-push hook executable (Linux/macOS/Windows)
+        // Make executable on macOS/Linux
         try {
             Set<PosixFilePermission> perms = Files.getPosixFilePermissions(hookPath);
             perms.add(PosixFilePermission.OWNER_EXECUTE);
@@ -63,7 +66,6 @@ public class GitHookManager {
             perms.add(PosixFilePermission.OTHERS_EXECUTE);
             Files.setPosixFilePermissions(hookPath, perms);
         } catch (UnsupportedOperationException e) {
-            // Windows OS fallback
             hookFile.setExecutable(true);
         }
 
