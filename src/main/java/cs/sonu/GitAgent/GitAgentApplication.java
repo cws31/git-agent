@@ -1,40 +1,31 @@
 package cs.sonu.GitAgent;
 
 import cs.sonu.GitAgent.cli.GitAgentCommand;
-import picocli.CommandLine;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
+import picocli.CommandLine;
 
 @SpringBootApplication
 public class GitAgentApplication {
 
 	public static void main(String[] args) {
-		System.exit(SpringApplication.exit(SpringApplication.run(GitAgentApplication.class, args)));
-	}
-}
+		SpringApplication app = new SpringApplication(GitAgentApplication.class);
 
-@Component
-class CliRunner implements CommandLineRunner, ExitCodeGenerator {
-
-	private final GitAgentCommand command;
-	private final CommandLine.IFactory factory;
-	private int exitCode;
-
-	public CliRunner(GitAgentCommand command, CommandLine.IFactory factory) {
-		this.command = command;
-		this.factory = factory;
-	}
-
-	@Override
-	public void run(String... args) {
-		exitCode = new CommandLine(command, factory).execute(args);
-	}
-
-	@Override
-	public int getExitCode() {
-		return exitCode;
+		if (args.length > 0) {
+			app.setWebApplicationType(WebApplicationType.NONE);
+			ConfigurableApplicationContext context = app.run(args);
+			GitAgentCommand command = context.getBean(GitAgentCommand.class);
+			CommandLine.IFactory factory = context.getBean(CommandLine.IFactory.class);
+			int exitCode = new CommandLine(command, factory).execute(args);
+			System.exit(exitCode);
+		} else {
+			app.setWebApplicationType(WebApplicationType.SERVLET);
+			app.run(args);
+		}
 	}
 }
