@@ -19,14 +19,13 @@ public class GitHookManager {
         this.gitService = gitService;
     }
 
-    // sonu kumar
     public void installHook(String jarAbsolutePath) throws IOException {
         String repoRoot = gitService.executeCommand("git", "rev-parse", "--show-toplevel");
         Path hookPath = Paths.get(repoRoot, ".git", "hooks", "pre-push");
 
         String formattedJarPath = jarAbsolutePath.replace("\\", "/");
 
-        // Universal POSIX shell hook compatible with Windows Git Bash, macOS, and Linux
+        // Universal hook for Windows CMD, Git Bash, macOS, and Linux
         String hookScript = """
                 #!/bin/sh
                 # AI Git Commit Agent Pre-Push Hook
@@ -35,21 +34,23 @@ public class GitHookManager {
                     exit 0
                 fi
 
-                # Attach interactive terminal stream for prompt input
-                exec < /dev/tty
-
-                if command -v cwsgit >/dev/null 2>&1; then
-                    cwsgit pre-push "$@"
-                elif command -v aigit >/dev/null 2>&1; then
-                    aigit pre-push "$@"
-                else
-                    java -jar "%s" --spring.main.web-application-type=none pre-push "$@"
+                # Attach TTY for interactive terminal input if available
+                if [ -t 0 ]; then
+                    :
+                elif [ -e /dev/tty ]; then
+                    exec < /dev/tty
                 fi
+
+                echo "----------------------------------------------------"
+                echo "🤖 AI Git Agent: Inspecting pre-push diff..."
+                echo "----------------------------------------------------"
+
+                java -jar "%s" --spring.main.web-application-type=none pre-push "$@"
 
                 EXIT_CODE=$?
 
                 if [ $EXIT_CODE -ne 0 ]; then
-                    echo "AI Git Agent rejected the push. Push cancelled."
+                    echo "❌ AI Git Agent rejected the push. Push cancelled."
                     exit $EXIT_CODE
                 fi
 
@@ -59,7 +60,6 @@ public class GitHookManager {
         Files.writeString(hookPath, hookScript);
         File hookFile = hookPath.toFile();
 
-        // Make executable on macOS/Linux
         try {
             Set<PosixFilePermission> perms = Files.getPosixFilePermissions(hookPath);
             perms.add(PosixFilePermission.OWNER_EXECUTE);
@@ -70,7 +70,6 @@ public class GitHookManager {
             hookFile.setExecutable(true);
         }
 
-        System.out.println("✓ Pre-push hook successfully installed at: " + hookPath);// adding ccomment for checking
-                                                                                     // purrpose
+        System.out.println("✓ Pre-push hook successfully re-installed at: " + hookPath);
     }
 }
