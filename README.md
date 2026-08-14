@@ -26,14 +26,14 @@ Set-Content -Path README.md -Value @"
 ### Windows (PowerShell)
 Run the following command in PowerShell:
 
-\`\`\`powershell
+\`\`\`
 iwr -useb https://raw.githubusercontent.com/cws31/git-agent/main/install.ps1 | iex
 \`\`\`
 
 ### macOS & Linux (Terminal)
 Run the following command in terminal:
 
-\`\`\`bash
+\`\`\`
 curl -sSL https://raw.githubusercontent.com/cws31/git-agent/main/install.sh | bash
 \`\`\`
 
@@ -46,7 +46,7 @@ curl -sSL https://raw.githubusercontent.com/cws31/git-agent/main/install.sh | ba
 ### 1. Enable \`cwsgit\` in Your Repository
 Navigate to any local Git project directory and run:
 
-\`\`\`bash
+\`\`\`
 cwsgit install
 \`\`\`
 
@@ -55,7 +55,7 @@ This registers the AI pre-push hook at \`.git/hooks/pre-push\`.
 ### 2. Commit & Push Code
 Make changes and execute standard Git workflow:
 
-\`\`\`bash
+\`\`\`
 git add .
 git commit -m "temp commit"
 git push origin main
@@ -64,7 +64,7 @@ git push origin main
 ### 3. Interactive Review
 Before code is pushed, \`cwsgit\` intercepts the action and provides an interactive prompt:
 
-\`\`\`text
+\`\`\`
 AI Git Agent
 ────────────────────────────────────────
 Original commit:
@@ -86,12 +86,12 @@ Use generated commit? [Yes / Edit / No]:
 ## Bypass & Uninstallation
 
 To bypass AI review for a single push operation:
-\`\`\`bash
+\`\`\`
 git push --no-verify origin main
 \`\`\`
 
 To remove \`cwsgit\` integration from a specific repository, delete the pre-push hook file:
-\`\`\`bash
+\`\`\`
 rm .git/hooks/pre-push
 \`\`\`
 
