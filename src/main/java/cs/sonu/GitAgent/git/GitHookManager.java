@@ -19,6 +19,7 @@ public class GitHookManager {
         this.gitService = gitService;
     }
 
+    // sonu kumar
     public void installHook(String jarAbsolutePath) throws IOException {
         String repoRoot = gitService.executeCommand("git", "rev-parse", "--show-toplevel");
         Path hookPath = Paths.get(repoRoot, ".git", "hooks", "pre-push");
