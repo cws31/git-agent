@@ -30,22 +30,16 @@ public class GitHookManager {
                 #!/bin/sh
                 # AI Git Commit Agent Pre-Push Hook
 
-                if [ "$1" = "--no-verify" ]; then
-                    exit 0
-                fi
+                echo "----------------------------------------------------"
+                echo "Git Agent: Inspecting pre-push commit..."
+                echo "----------------------------------------------------"
 
-                # Attach TTY for interactive terminal input if available
-                if [ -t 0 ]; then
-                    :
-                elif [ -e /dev/tty ]; then
+                # Give the Java CLI access to the interactive terminal
+                if [ -e /dev/tty ]; then
                     exec < /dev/tty
                 fi
 
-                echo "----------------------------------------------------"
-                echo "🤖 AI Git Agent: Inspecting pre-push diff..."
-                echo "----------------------------------------------------"
-
-                java -jar "%s" --spring.main.web-application-type=none pre-push "$@"
+                java -jar "%s" pre-push "$@"
 
                 EXIT_CODE=$?
 
@@ -54,6 +48,7 @@ public class GitHookManager {
                     exit $EXIT_CODE
                 fi
 
+                echo "✓ AI Git Agent approved the push."
                 exit 0
                 """.formatted(formattedJarPath);
 
