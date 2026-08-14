@@ -6,20 +6,17 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @SpringBootApplication
 public class GitAgentApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(GitAgentApplication.class, args);
+		System.exit(SpringApplication.exit(SpringApplication.run(GitAgentApplication.class, args)));
 	}
 }
 
-// Only execute CLI when specifically running with the "cli" profile
 @Component
-@Profile("cli")
 class CliRunner implements CommandLineRunner, ExitCodeGenerator {
 
 	private final GitAgentCommand command;
