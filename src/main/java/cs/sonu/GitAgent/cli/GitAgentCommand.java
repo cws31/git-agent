@@ -31,7 +31,7 @@ public class GitAgentCommand implements Callable<Integer> {
     private final ApprovalService approvalService;
     private final RestTemplate restTemplate;
 
-    @Value("${cwsgit.backend.url:http://localhost:8080/api/v1/generate-commit}")
+    @Value("${cwsgit.backend.url:https://git-agent-zqsc.onrender.com/api/v1/generate-commit}")
     private String backendUrl;
 
     public GitAgentCommand(GitContextCollector contextCollector,
