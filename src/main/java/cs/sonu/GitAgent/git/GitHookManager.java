@@ -69,6 +69,7 @@ public class GitHookManager {
             hookFile.setExecutable(true);
         }
 
-        System.out.println("✓ Pre-push hook successfully installed at: " + hookPath);
+        System.out.println("✓ Pre-push hook successfully installed at: " + hookPath);// adding ccomment for checking
+                                                                                     // purrpose
     }
 }
