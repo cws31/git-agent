@@ -14,6 +14,19 @@ public record GeneratedCommit(
                 @Description("True only if this commit introduces a breaking change.") boolean breakingChange) {
 
         /**
+         * Returns the formatted conventional header string (e.g., "feat(auth): add
+         * login validation").
+         */
+        public String header() {
+                String typeStr = (type != null && !type.isBlank()) ? type.trim() : "chore";
+                String scopeStr = (scope != null && !scope.isBlank()) ? "(" + scope.trim() + ")" : "";
+                String bangStr = breakingChange ? "!" : "";
+                String subjectStr = (subject != null && !subject.isBlank()) ? subject.trim() : "update code";
+
+                return String.format("%s%s%s: %s", typeStr, scopeStr, bangStr, subjectStr);
+        }
+
+        /**
          * Parses a raw AI response string into a structured GeneratedCommit record.
          */
         public static GeneratedCommit fromRawMessage(String rawMessage) {

@@ -90,7 +90,7 @@ public class GitAgentCommand implements Callable<Integer> {
         }
 
         System.out.println("✓ Context collected (" + context.changedFiles().size() + " files modified)");
-        System.out.println("Generating production-grade commit message via AI proxy...\n");
+        System.out.println("Generating production-grade commit category header via AI proxy...\n");
 
         GeneratedCommit generatedCommit;
         try {
@@ -118,7 +118,7 @@ public class GitAgentCommand implements Callable<Integer> {
 
         } catch (Exception e) {
             System.err.println(
-                    "\nUnable to generate a commit message. AI provider unavailable or timed out: " + e.getMessage());
+                    "\nUnable to generate commit header. AI provider unavailable or timed out: " + e.getMessage());
             return cancelPushPrompt();
         }
 
@@ -128,7 +128,9 @@ public class GitAgentCommand implements Callable<Integer> {
             return cancelPushPrompt();
         }
 
-        String finalMessage = formatter.format(generatedCommit);
+        // Updated format call: Passes original message to keep original developer
+        // intent intact
+        String finalMessage = formatter.format(generatedCommit, context.originalMessage());
         ApprovalService.Choice choice = approvalService.promptUser(context.originalMessage(), finalMessage);
 
         try {
